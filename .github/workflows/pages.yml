@@ -23,8 +23,10 @@ jobs:
     steps:
       - name: Baixar o projeto
         uses: actions/checkout@v4
-      - name: Configurar GitHub Pages
+      - name: Configurar e ativar GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Preparar arquivos
         uses: actions/upload-pages-artifact@v3
         with:
