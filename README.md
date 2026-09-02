@@ -1,52 +1,50 @@
-# Nível Clean — Circuit Designer + Firebase + GitHub
+# Nível Clean — Sensor ultrassônico com Firebase
 
-Painel web para controlar e acompanhar o LED do projeto **Nível Clean**.
+Projeto com **ESP32-S3**, sensor ultrassônico **HC-SR04** e display **LCD 16×2 I²C**. A distância aparece no display do circuito e também no painel publicado pelo GitHub Pages.
 
-## Como funciona
+## Fluxo
 
 ```text
-Painel no GitHub Pages  ⇄  Firebase Realtime Database  ⇄  Circuit Designer
-                           /led.json
+HC-SR04 → ESP32-S3 → LCD 16×2
+                  └→ Firebase /distancia → painel GitHub Pages
 ```
 
-O Firebase é o intermediário em tempo real. O GitHub guarda e publica o painel; ele não substitui o banco de dados.
+- Painel: https://natan2026.github.io/nivelclean/
+- Firebase: `https://nivelclean-2bc3b-default-rtdb.firebaseio.com/distancia.json`
+- Circuit Designer: https://app.cirkitdesigner.com/project/723acf31-be30-40e0-9bad-f043e2df169c
+- Firmware: `firmware/sensor_ultrassonico.ino`
 
-- Firebase: `https://nivelclean-2bc3b-default-rtdb.firebaseio.com/led.json`
-- Circuit Designer: `https://app.cirkitdesigner.com/project/723acf31-be30-40e0-9bad-f043e2df169c`
-- Painel: será disponibilizado pelo GitHub Pages.
+## Ligações
 
-O painel consulta o valor a cada 2 segundos e grava com uma requisição REST `PUT`. Ele reconhece valores booleanos, `0/1`, `"0"/"1"`, `"ON"/"OFF"` e `"ligado"/"desligado"`.
+| Componente | Pino | ESP32-S3 |
+|---|---|---|
+| HC-SR04 | VCC | 5V |
+| HC-SR04 | GND | GND |
+| HC-SR04 | TRIG | GPIO 4 |
+| HC-SR04 | ECHO | GPIO 5 |
+| LCD I²C | VCC | 5V |
+| LCD I²C | GND | GND |
+| LCD I²C | SDA | GPIO 8 |
+| LCD I²C | SCL | GPIO 9 |
 
-## Publicar o painel
+> Em montagem física, o ECHO do HC-SR04 pode chegar a 5 V. Use divisor resistivo ou conversor de nível antes do GPIO 5 do ESP32-S3. Na simulação, siga o comportamento do componente do Cirkit Designer.
 
-1. Abra **Settings → Pages** neste repositório.
-2. Em **Build and deployment**, selecione **GitHub Actions**.
-3. Abra a aba **Actions** e acompanhe a execução “Publicar painel no GitHub Pages”.
-4. Ao finalizar, o endereço esperado é:
-   `https://natan2026.github.io/nivelclean/`
+## Funcionamento
 
-## Código mínimo no Circuit Designer
+- O sensor é lido a cada 200 ms.
+- O LCD mostra a distância com uma casa decimal.
+- O Firebase recebe a distância uma vez por segundo.
+- O painel web consulta `/distancia.json` uma vez por segundo.
+- Faixa considerada válida: 2 a 400 cm.
+- Um filtro simples reduz oscilações da leitura.
 
-O programa do circuito deve ler e/ou escrever o mesmo nó:
+## Bibliotecas
 
-```cpp
-const char* firebaseUrl =
-  "https://nivelclean-2bc3b-default-rtdb.firebaseio.com/led.json";
-```
+- `WiFi.h`
+- `HTTPClient.h`
+- `Wire.h`
+- `LiquidCrystal_I2C.h`
 
-Leitura esperada:
-- `1` liga o LED;
-- `0` desliga o LED.
+## Segurança
 
-Se o código atual já consulta esse endereço, nenhuma troca de URL é necessária.
-
-## Segurança importante
-
-O painel usa o endpoint REST diretamente no navegador. Para protótipo/simulação, regras públicas podem funcionar, mas não são recomendadas para um equipamento real. Em produção, habilite Firebase Authentication e regras que exijam usuário autenticado. Nunca coloque token administrativo, senha ou chave privada neste repositório.
-
-## Diagnóstico
-
-- **HTTP 401/403:** as regras do Firebase não permitem a operação.
-- **Painel muda, circuito não:** o circuito não está consultando exatamente `/led.json` ou usa outro formato.
-- **Circuito muda, painel não:** confirme que a gravação ocorre no mesmo nó.
-- **Valor aparece como objeto:** ajuste o circuito para manter `led` como valor simples, por exemplo `0` ou `1`.
+O endpoint REST está no navegador. Para protótipos e simulação, regras públicas podem funcionar. Para equipamento real, utilize Firebase Authentication e regras que aceitem somente usuários/dispositivos autorizados. Não publique senhas ou tokens administrativos.
