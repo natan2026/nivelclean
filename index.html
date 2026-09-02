@@ -1,118 +1,60 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#0b1220">
-  <title>Nível Clean | Controle Firebase</title>
-  <style>
-    :root{color-scheme:dark;--bg:#070b13;--card:#101827;--line:#243047;--text:#f4f7fb;--muted:#9cabc2;--blue:#27a8ff;--green:#23d18b;--red:#ff5e6c}
-    *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 50% -20%,#17325e 0,transparent 42%),var(--bg);color:var(--text);display:grid;place-items:center;padding:22px}
-    main{width:min(100%,480px)}header{text-align:center;margin-bottom:20px}.brand{font-size:.78rem;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);font-weight:800}h1{font-size:clamp(1.8rem,8vw,2.7rem);margin:.5rem 0 .35rem}header p{color:var(--muted);margin:0}
-    .card{background:linear-gradient(160deg,rgba(20,31,51,.97),rgba(11,18,31,.97));border:1px solid var(--line);border-radius:24px;padding:26px;box-shadow:0 24px 70px #0008}
-    .status{display:flex;align-items:center;justify-content:space-between;gap:16px}.status-copy small{color:var(--muted);display:block;margin-bottom:5px}.status-copy strong{font-size:1.45rem}.lamp{width:82px;height:82px;border-radius:50%;background:#283349;border:9px solid #151e2e;box-shadow:inset 0 0 25px #0008;transition:.25s}.lamp.on{background:var(--green);box-shadow:0 0 32px #23d18b88,inset 0 0 18px #fff8}
-    .switch-row{margin:28px 0 18px;display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.switch-row span{font-weight:700}.switch{position:relative;width:70px;height:38px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;cursor:pointer;background:#39455a;border-radius:99px;transition:.25s}.slider:before{content:"";position:absolute;width:30px;height:30px;left:4px;top:4px;background:white;border-radius:50%;transition:.25s}.switch input:checked+.slider{background:var(--green)}.switch input:checked+.slider:before{transform:translateX(32px)}.switch input:disabled+.slider{cursor:wait;opacity:.55}
-    .meta{display:grid;gap:10px;font-size:.86rem;color:var(--muted)}.meta div{display:flex;justify-content:space-between;gap:18px}.meta code{color:#cbeaff;text-align:right;overflow-wrap:anywhere}.notice{margin-top:18px;padding:12px 14px;border-radius:12px;background:#152238;color:#bcd1ec;font-size:.84rem;line-height:1.45}.notice.error{background:#321820;color:#ffb7be}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#8090a8;margin-right:7px}.dot.online{background:var(--green);box-shadow:0 0 9px var(--green)}footer{text-align:center;color:#68778f;font-size:.75rem;margin-top:17px}
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07111f"><title>Nível Clean | Sensor de Distância</title>
+<style>
+:root{color-scheme:dark;--bg:#050a12;--card:#101a2a;--line:#263653;--text:#f4f8ff;--muted:#9aabc4;--blue:#28b7ff;--cyan:#43e0d2;--green:#36db8b;--yellow:#ffcf52;--red:#ff6170}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 50% -10%,#15446b 0,transparent 43%),var(--bg);color:var(--text);display:grid;place-items:center;padding:22px}
+main{width:min(100%,520px)}header{text-align:center;margin-bottom:20px}.brand{font-size:.76rem;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);font-weight:800}h1{font-size:clamp(1.75rem,7vw,2.7rem);margin:.5rem 0 .35rem}header p{color:var(--muted);margin:0}
+.card{background:linear-gradient(155deg,rgba(20,35,56,.98),rgba(8,17,31,.98));border:1px solid var(--line);border-radius:26px;padding:27px;box-shadow:0 25px 75px #0009}
+.reading{text-align:center;padding:10px 0 22px}.reading small{display:block;color:var(--muted);margin-bottom:5px}.value{font-size:clamp(4.2rem,20vw,7rem);font-weight:850;letter-spacing:-.07em;line-height:1;color:var(--cyan);text-shadow:0 0 30px #43e0d244}.unit{font-size:1.25rem;color:var(--muted);font-weight:700;margin-left:7px}
+.gauge{height:18px;background:#1c2940;border:1px solid #31415d;border-radius:99px;overflow:hidden;margin:4px 0 9px}.bar{width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--red),var(--yellow),var(--green),var(--blue));transition:width .35s ease}.scale{display:flex;justify-content:space-between;color:#71829c;font-size:.72rem}
+.status-label{margin:24px 0 16px;padding:13px 15px;border-radius:13px;background:#17243a;text-align:center;font-weight:750;color:#cce2ff}
+.meta{display:grid;gap:10px;padding-top:17px;border-top:1px solid var(--line);font-size:.85rem;color:var(--muted)}.meta div{display:flex;justify-content:space-between;gap:18px}.meta code{color:#d2eeff;text-align:right;overflow-wrap:anywhere}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#7e8ca3;margin-right:7px}.dot.online{background:var(--green);box-shadow:0 0 9px var(--green)}
+.notice{margin-top:17px;padding:12px 14px;border-radius:12px;background:#15263b;color:#bdd8ee;font-size:.82rem;line-height:1.45}.notice.error{background:#331820;color:#ffbdc4}footer{text-align:center;color:#687890;font-size:.74rem;margin-top:17px}
+</style>
 </head>
-<body>
-<main>
-  <header><div class="brand">Nível Clean</div><h1>Controle do LED</h1><p>Circuit Designer · Firebase · GitHub</p></header>
-  <section class="card">
-    <div class="status">
-      <div class="status-copy"><small>Estado no Firebase</small><strong id="state">Conectando…</strong></div>
-      <div class="lamp" id="lamp" aria-hidden="true"></div>
-    </div>
-    <div class="switch-row">
-      <span>Ligar / desligar</span>
-      <label class="switch"><input id="control" type="checkbox" disabled aria-label="Controle do LED"><span class="slider"></span></label>
-    </div>
-    <div class="meta">
-      <div><span><i class="dot" id="dot"></i>Conexão</span><code id="connection">Aguardando</code></div>
-      <div><span>Valor recebido</span><code id="raw">—</code></div>
-      <div><span>Última leitura</span><code id="updated">—</code></div>
-    </div>
-    <div class="notice" id="notice">O painel será atualizado automaticamente a cada 2 segundos.</div>
-  </section>
-  <footer>Elétrica Santos · Comunicação em tempo real pelo Firebase</footer>
+<body><main>
+<header><div class="brand">Nível Clean</div><h1>Distância em tempo real</h1><p>Sensor ultrassônico · Firebase · GitHub</p></header>
+<section class="card">
+<div class="reading"><small>Distância medida</small><span class="value" id="value">--</span><span class="unit">cm</span></div>
+<div class="gauge"><div class="bar" id="bar"></div></div><div class="scale"><span>0 cm</span><span>200 cm</span><span>400 cm</span></div>
+<div class="status-label" id="level">Aguardando leitura do sensor…</div>
+<div class="meta">
+<div><span><i class="dot" id="dot"></i>Conexão</span><code id="connection">Conectando</code></div>
+<div><span>Valor no Firebase</span><code id="raw">—</code></div>
+<div><span>Última atualização</span><code id="updated">—</code></div>
+</div>
+<div class="notice" id="notice">O painel consulta o Firebase a cada segundo.</div>
+</section><footer>Elétrica Santos · Monitoramento de nível e distância</footer>
 </main>
 <script>
-const FIREBASE_URL = "https://nivelclean-2bc3b-default-rtdb.firebaseio.com/led.json";
-const el = id => document.getElementById(id);
-let currentValue = null;
-let writing = false;
-
-function valueIsOn(value) {
-  if (value === true || value === 1) return true;
-  if (typeof value === "string") return ["1","true","on","ligado","liga"].includes(value.trim().toLowerCase());
-  return false;
+const FIREBASE_URL="https://nivelclean-2bc3b-default-rtdb.firebaseio.com/distancia.json";
+const $=id=>document.getElementById(id);
+function classify(cm){
+ if(cm<20)return["MUITO PRÓXIMO","var(--red)"];
+ if(cm<80)return["PRÓXIMO","var(--yellow)"];
+ if(cm<200)return["DISTÂNCIA MÉDIA","var(--green)"];
+ return["DISTANTE","var(--blue)"];
 }
-function encodedValue(on) {
-  if (typeof currentValue === "boolean") return on;
-  if (typeof currentValue === "string") {
-    const v = currentValue.trim();
-    if (/^(on|off)$/i.test(v)) return on ? (v === v.toUpperCase() ? "ON" : "on") : (v === v.toUpperCase() ? "OFF" : "off");
-    if (/^(ligado|desligado)$/i.test(v)) return on ? "ligado" : "desligado";
-    if (/^[01]$/.test(v)) return on ? "1" : "0";
-  }
-  return on ? 1 : 0;
+function render(data){
+ const cm=Number(typeof data==="object"&&data!==null?data.cm:data);
+ if(!Number.isFinite(cm))throw new Error("valor de distância inválido");
+ const shown=Math.round(cm*10)/10,[label,color]=classify(shown);
+ $("value").textContent=shown.toFixed(1);$("value").style.color=color;
+ $("bar").style.width=Math.max(0,Math.min(100,shown/4))+"%";
+ $("level").textContent=label;$("level").style.color=color;
+ $("raw").textContent=JSON.stringify(data);$("updated").textContent=new Date().toLocaleTimeString("pt-BR");
+ $("connection").textContent="Firebase online";$("dot").classList.add("online");
+ $("notice").className="notice";$("notice").textContent="Sincronizado com o ESP32-S3 e o display do circuito.";
 }
-function render(value) {
-  currentValue = value;
-  const on = valueIsOn(value);
-  el("state").textContent = on ? "LIGADO" : "DESLIGADO";
-  el("state").style.color = on ? "var(--green)" : "var(--text)";
-  el("lamp").classList.toggle("on", on);
-  el("control").checked = on;
-  el("raw").textContent = JSON.stringify(value);
-  el("updated").textContent = new Date().toLocaleTimeString("pt-BR");
-  el("connection").textContent = "Firebase online";
-  el("dot").classList.add("online");
-  el("notice").className = "notice";
-  el("notice").textContent = "Sincronizado. Alterações feitas aqui são lidas pelo circuito no mesmo endereço.";
+function fail(error){
+ $("connection").textContent="Sem leitura";$("dot").classList.remove("online");
+ $("notice").className="notice error";$("notice").textContent="Falha: "+error.message;
 }
-function showError(error) {
-  el("connection").textContent = "Falha na conexão";
-  el("dot").classList.remove("online");
-  el("notice").className = "notice error";
-  el("notice").textContent = "Não foi possível acessar o Firebase: " + error.message;
+async function update(){
+ try{const r=await fetch(FIREBASE_URL,{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);render(await r.json())}catch(e){fail(e)}
 }
-async function readState() {
-  if (writing) return;
-  try {
-    const response = await fetch(FIREBASE_URL, {cache:"no-store"});
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    render(await response.json());
-    el("control").disabled = false;
-  } catch (error) {
-    showError(error);
-    el("control").disabled = true;
-  }
-}
-async function writeState(on) {
-  writing = true;
-  el("control").disabled = true;
-  el("notice").className = "notice";
-  el("notice").textContent = "Enviando comando…";
-  try {
-    const response = await fetch(FIREBASE_URL, {
-      method:"PUT",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(encodedValue(on))
-    });
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    render(await response.json());
-  } catch (error) {
-    el("control").checked = !on;
-    showError(error);
-  } finally {
-    writing = false;
-    el("control").disabled = false;
-  }
-}
-el("control").addEventListener("change", event => writeState(event.target.checked));
-readState();
-setInterval(readState, 2000);
-</script>
-</body>
-</html>
+update();setInterval(update,1000);
+</script></body></html>
