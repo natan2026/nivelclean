@@ -1,0 +1,72 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "nivelclean": {
+      "writers": {
+        ".read": false,
+        ".write": false
+      },
+      "viewers": {
+        ".read": false,
+        ".write": false
+      },
+      "devices": {
+        "$uid": {
+          "telemetry": {
+            ".read": "auth != null && ((auth.uid === $uid && root.child('nivelclean/writers').child(auth.uid).val() === true) || root.child('nivelclean/viewers').child(auth.uid).child($uid).val() === true)",
+            ".write": "auth != null && auth.uid === $uid && root.child('nivelclean/writers').child(auth.uid).val() === true && newData.exists()",
+            ".validate": "newData.hasChildren(['status', 'calibrated', 'timestamp', 'rssi', 'version']) && (newData.child('status').val() !== 'ok' || newData.hasChildren(['distanceCm'])) && (newData.child('status').val() !== 'sem_eco' || (!newData.child('distanceCm').exists() && !newData.child('levelPct').exists())) && (newData.child('calibrated').val() !== true || (newData.hasChildren(['emptyCm','fullCm']) && newData.child('emptyCm').val() > newData.child('fullCm').val()))",
+            "status": {
+              ".validate": "newData.val() === 'ok' || newData.val() === 'sem_eco'"
+            },
+            "calibrated": {
+              ".validate": "newData.isBoolean()"
+            },
+            "distanceCm": {
+              ".validate": "newData.isNumber() && newData.val() >= 2 && newData.val() <= 400"
+            },
+            "levelPct": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100 && newData.parent().child('calibrated').val() === true"
+            },
+            "emptyCm": {
+              ".validate": "newData.isNumber() && newData.val() >= 2 && newData.val() <= 400"
+            },
+            "fullCm": {
+              ".validate": "newData.isNumber() && newData.val() >= 2 && newData.val() <= 400"
+            },
+            "rssi": {
+              ".validate": "newData.isNumber() && newData.val() >= -127 && newData.val() <= 0"
+            },
+            "version": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "timestamp": {
+              ".validate": "newData.isNumber() && newData.val() >= now - 60000 && newData.val() <= now + 10000"
+            },
+            "capacityL": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 1000000"
+            },
+            "tankHeightCm": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 400"
+            },
+            "tankDiameterCm": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 10000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
+    },
+    "Dados": {
+      ".read": true,
+      ".write": true
+    },
+    "distancia": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
