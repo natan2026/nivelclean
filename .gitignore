@@ -1,0 +1,7 @@
+# Credenciais locais: nunca publicar
+firmware/**/config.h
+!firmware/**/config.example.h
+*.bin
+*.elf
+.DS_Store
+node_modules/
