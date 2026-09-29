@@ -11,8 +11,8 @@
 #include <time.h>
 #include <math.h>
 #include "firebase_roots.h"
-#if __has_include("config.h")
-#include "config.h"
+#if __has_include("nivelclean_config.h")
+#include "nivelclean_config.h"
 #else
 #include "config.example.h"
 #endif
@@ -61,7 +61,6 @@ int httpsRequest(const String& url, const char* method, const char* contentType,
   BearSSL::WiFiClientSecure client;
   client.setTrustAnchors(&trustAnchors);
   client.setTimeout(12000);
-  client.setHandshakeTimeout(12);
   HTTPClient http;
   http.setTimeout(12000);
   http.setReuse(false);
@@ -103,7 +102,7 @@ bool authenticate() {
   if (deserializeJson(result, response)) { Serial.println(F("Resposta de autenticacao invalida.")); return false; }
   const String uid = result[refreshing ? "user_id" : "localId"].as<String>();
   if (uid != DEVICE_UID) {
-    Serial.println(F("UID diferente da conta autenticada. Corrija DEVICE_UID no config.h."));
+    Serial.println(F("UID diferente da conta autenticada. Corrija DEVICE_UID no nivelclean_config.h."));
     idToken = ""; refreshToken = ""; return false;
   }
   idToken = result[refreshing ? "id_token" : "idToken"].as<String>();
@@ -171,7 +170,7 @@ void setup() {
   Serial.println(F("\nNivel Clean | ESP8266 | TRIG D1/GPIO5 | ECHO D2/GPIO4 com divisor"));
   configured = !placeholder(WIFI_SSID) && !placeholder(FIREBASE_API_KEY) && !placeholder(DEVICE_EMAIL)
     && !placeholder(DEVICE_PASSWORD) && !placeholder(DEVICE_UID) && validUid();
-  if (!configured) Serial.println(F("Preencha config.h para ativar Wi-Fi/Firebase. Medicao local continua no Serial."));
+  if (!configured) Serial.println(F("Preencha nivelclean_config.h para ativar Wi-Fi/Firebase. Medicao local continua no Serial."));
   if (!calibrationReady()) Serial.println(F("Percentual desativado: configure distancias vazio/cheio e CALIBRATED=true."));
   if (configured) {
     WiFi.persistent(false); WiFi.mode(WIFI_STA); WiFi.setAutoReconnect(true);

@@ -1,6 +1,6 @@
 #pragma once
-// Copie este arquivo para config.h na MESMA pasta do .ino.
-// Edite somente a copia local. Nunca publique config.h no GitHub.
+// Copie este arquivo para nivelclean_config.h na MESMA pasta do .ino.
+// Edite somente a copia local. Nunca publique nivelclean_config.h no GitHub.
 constexpr char WIFI_SSID[] = "PREENCHA_WIFI_2_4_GHZ";
 constexpr char WIFI_PASSWORD[] = "PREENCHA_SENHA_WIFI";
 constexpr char FIREBASE_API_KEY[] = "PREENCHA_CHAVE_API_WEB";

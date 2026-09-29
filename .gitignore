@@ -1,5 +1,6 @@
 # Credenciais locais: nunca publicar
 firmware/**/config.h
+firmware/**/nivelclean_config.h
 !firmware/**/config.example.h
 *.bin
 *.elf

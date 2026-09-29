@@ -4,7 +4,7 @@ A versão NodeMCU ESP8266 está em **[esp8266/](https://natan2026.github.io/nive
 
 - **[Guia completo de instalação, ligação e Firebase](https://natan2026.github.io/nivelclean/esp8266/guia.html)**
 - Firmware: [`firmware/nivelclean_esp8266/nivelclean_esp8266.ino`](firmware/nivelclean_esp8266/nivelclean_esp8266.ino)
-- Copie `config.example.h` para `config.h` localmente e preencha Wi-Fi e conta Firebase. Não publique o arquivo com senhas.
+- Copie `config.example.h` para `nivelclean_config.h` localmente e preencha Wi-Fi e conta Firebase. Não publique o arquivo com senhas.
 - NodeMCU: TRIG em **D1/GPIO5**; ECHO em **D2/GPIO4 com divisor 1 kΩ / 2 kΩ**; HC-SR04 em 5 V e GND comum.
 - Caixa: **500 L nominais, 100 cm de altura, 85 cm de diâmetro**. Referência de calibração: sensor 10 cm acima do máximo; vazio 110 cm / cheio 10 cm. Confira na instalação antes de ativar `CALIBRATED`.
 - Firebase Authentication por e-mail/senha; regras em [`firebase/esp8266.rules.json`](firebase/esp8266.rules.json). Estas regras completas não autorizam o antigo `/distancia`; revise a migração conforme o guia.

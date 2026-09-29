@@ -20,7 +20,7 @@ function render(){
   if(Number.isFinite(sample.rssi)){$('rssi').textContent=sample.rssi+' dBm';$('wifiDescription').textContent=sample.rssi>=-60?'Sinal forte':sample.rssi>=-75?'Sinal razoável':'Sinal fraco';}
   if(sample.status!=='ok'){status('O sensor não recebeu um eco válido','Confira as ligações, a posição do sensor e a superfície da água. Falha de leitura não significa caixa vazia.','Sensor sem leitura','warn');$('levelLabel').textContent='Sem eco';return;}
   $('distance').textContent=number(sample.distanceCm);
-  if(sample.percent===null){status('Falta calibrar o reservatório','A distância já está disponível. No config.h, informe as distâncias com a caixa vazia e cheia e confirme CALIBRATED.','Sensor conectado','live');$('levelDescription').textContent='Calibre a caixa para obter o percentual.';$('levelLabel').textContent='Sem calibração';return;}
+  if(sample.percent===null){status('Falta calibrar o reservatório','A distância já está disponível. No nivelclean_config.h, informe as distâncias com a caixa vazia e cheia e confirme CALIBRATED.','Sensor conectado','live');$('levelDescription').textContent='Calibre a caixa para obter o percentual.';$('levelLabel').textContent='Sem calibração';return;}
   const p=sample.percent;
   $('percentage').textContent=number(p,0);$('water').style.height=p+'%';$('gauge').setAttribute('aria-valuenow',p.toFixed(1));$('gauge').setAttribute('aria-valuetext',number(p,0)+' por cento');$('gaugeLabel').textContent='';
   $('levelLabel').textContent=p<=20?'Nível baixo':p>=95?'Nível alto':'Nível normal';
