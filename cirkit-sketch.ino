@@ -6,6 +6,7 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <time.h>
+#include <sys/time.h>
 #include <math.h>
 
 #include <pgmspace.h>
@@ -77,6 +78,7 @@ const uint8_t TRIG_PIN=4, ECHO_PIN=5, SDA_PIN=8, SCL_PIN=9;
 const float EMPTY_CM=110.0f, FULL_CM=10.0f; // EXEMPLOS da simulacao, nao da caixa real.
 LiquidCrystal_I2C lcdLevel(0x27,16,2), lcdTurbidity(0x26,16,2);
 String deviceUid, sessionToken, command;
+String stagedUid, stagedToken;
 uint32_t lastRead=0, lastPublish=0, tokenStart=0;
 float lastCm=NAN;
 const char* DB="https://nivelclean-2bc3b-default-rtdb.firebaseio.com";
@@ -118,8 +120,30 @@ void readCommand(){
   while(Serial.available()){
     char c=Serial.read();
     if(c=='\r')continue;
-    if(c=='\n'){
-      if(command=="SAIR"){sessionToken="";deviceUid="";Serial.println("Sessao encerrada.");}
+    if(c=='\n' || c==';'){
+      Serial.printf("Serial: %u caracteres recebidos\n", unsigned(command.length()));
+      if(command.startsWith("TIME ")){
+        long long epoch=command.substring(5).toInt();
+        if(epoch>=1767225600LL && epoch<2145916800LL){struct timeval tv={};tv.tv_sec=epoch;settimeofday(&tv,nullptr);Serial.println("Relogio da simulacao ajustado.");}
+      }
+      else if(command=="STATUS"){Serial.printf("Wi-Fi: %d | relogio: %lld\n",int(WiFi.status()),(long long)time(nullptr));}
+      else if(command.startsWith("AUTH_BEGIN ")){
+        stagedUid=command.substring(11);stagedToken="";
+        if(!safeUid(stagedUid))stagedUid="";
+        Serial.println(stagedUid.isEmpty()?"UID invalido.":"Inicio da sessao recebido.");
+      }
+      else if(command.startsWith("AUTH_PART ")){
+        String part=command.substring(10);
+        if(!stagedUid.isEmpty() && part.length()>0 && part.length()<=80 && stagedToken.length()+part.length()<4000){
+          stagedToken+=part;Serial.printf("Sessao: %u caracteres acumulados\n",unsigned(stagedToken.length()));
+        }else {stagedUid="";stagedToken="";Serial.println("Parte invalida. Reinicie a sessao.");}
+      }
+      else if(command=="AUTH_END"){
+        if(safeUid(stagedUid)&&stagedToken.length()>100){deviceUid=stagedUid;sessionToken=stagedToken;tokenStart=millis();Serial.println("Sessao recebida. Aguardando Wi-Fi e NTP.");}
+        else Serial.println("Sessao incompleta. Reinicie.");
+        stagedUid="";stagedToken="";
+      }
+      else if(command=="SAIR"){sessionToken="";deviceUid="";stagedUid="";stagedToken="";Serial.println("Sessao encerrada.");}
       else if(command.startsWith("AUTH ")){
         int split=command.indexOf(' ',5);
         String uid=split>5?command.substring(5,split):"";
@@ -134,21 +158,25 @@ void readCommand(){
 }
 void publish(float cm){
   if(sessionToken.isEmpty())return;
+  Serial.printf("Publicando: sessao com %u caracteres\n",unsigned(sessionToken.length()));
   if(uint32_t(millis()-tokenStart)>3600000UL){sessionToken="";Serial.println("Sessao expirou. Copie uma nova pelo painel.");return;}
-  if(WiFi.status()!=WL_CONNECTED||time(nullptr)<1767225600)return;
+  if(WiFi.status()!=WL_CONNECTED){Serial.println("Aguardando Wi-Fi.");return;}
+  if(time(nullptr)<1767225600){Serial.println("Aguardando relogio. Envie TIME com o horario atual pelo Serial.");return;}
   // Recolhe nova amostra imediatamente antes de enviar: nao renova dado antigo.
   const bool valid=isfinite(cm);
   String body="{\"status\":\""+String(valid?"ok":"sem_eco")+"\",\"calibrated\":true,\"emptyCm\":110,\"fullCm\":10,\"timestamp\":{\".sv\":\"timestamp\"},\"rssi\":"+String(WiFi.RSSI())+",\"version\":\"simulacao-2.0.0\",\"source\":\"simulacao\",\"turbidity\":{\"status\":\"not_configured\"}";
   if(valid)body+=",\"distanceCm\":"+String(cm,1)+",\"levelPct\":"+String(percent(cm),1);
   body+="}";
-  WiFiClientSecure client;client.setCACert(FIREBASE_ROOTS);
-  HTTPClient http;http.setTimeout(8000);http.useHTTP10(true);
-  if(!http.begin(client,String(DB)+"/nivelclean/devices/"+deviceUid+"/telemetry.json?auth="+sessionToken+"&print=silent"))return;
+  WiFiClientSecure client;client.setCACert(FIREBASE_ROOTS);client.setHandshakeTimeout(8);
+  HTTPClient http;http.setTimeout(8000);http.setConnectTimeout(8000);http.useHTTP10(true);
+  if(!http.begin(client,String(DB)+"/nivelclean/devices/"+deviceUid+"/telemetry.json?auth="+sessionToken+"&print=silent")){Serial.println("Falha ao iniciar HTTPS.");return;}
   http.addHeader("Content-Type","application/json");
   int code=http.PUT(body);http.end();Serial.printf("Firebase HTTP %d\n",code);
   if(code==401||code==403){sessionToken="";Serial.println("Confira permissao do UID ou renove a sessao no painel.");}
 }
 void setup(){
+  // A sessao Firebase excede o buffer UART padrao de 256 bytes.
+  Serial.setRxBufferSize(8192);
   Serial.begin(115200);pinMode(TRIG_PIN,OUTPUT);pinMode(ECHO_PIN,INPUT);
   Wire.begin(SDA_PIN,SCL_PIN);lcdLevel.init();lcdLevel.backlight();lcdTurbidity.init();lcdTurbidity.backlight();
   display(NAN);
