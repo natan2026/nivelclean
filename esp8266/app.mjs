@@ -1,4 +1,4 @@
-import {parseTelemetry, isFresh} from './model.mjs';
+import {parseTelemetry, isFresh, levelClass} from './model.mjs';
 const DB = 'https://nivelclean-2bc3b-default-rtdb.firebaseio.com';
 const STORAGE = 'nivelclean.esp8266.connection.v1';
 const $ = id => document.getElementById(id);
@@ -8,25 +8,29 @@ const validConfig = c => c && typeof c.apiKey === 'string' && /^[A-Za-z0-9_-]{15
 try { const stored = JSON.parse(localStorage.getItem(STORAGE)); if (validConfig(stored)) config = stored; } catch {}
 if(config){$('apiKey').value=config.apiKey;$('deviceUid').value=config.deviceUid;$('setupSummary').textContent='Configuração salva · entre para acompanhar';}
 function status(title,text,badge,kind=''){$('statusTitle').textContent=title;$('statusText').textContent=text;$('connection').textContent=badge;$('connection').className='badge '+kind;}
-function clearValues(){ $('percentage').textContent='—';$('distance').textContent='—';$('rssi').textContent='—';$('wifiDescription').textContent='Aguardando o dispositivo';$('levelLabel').textContent='Sem leitura';$('water').style.height='0%';$('gauge').removeAttribute('aria-valuenow');$('gauge').setAttribute('aria-valuetext','Sem leitura');$('gaugeLabel').textContent='SEM DADOS';$('levelDescription').textContent='Nenhuma medição atual disponível.'; }
+function clearValues(){ $('turbidityStatus').textContent='Aguardando leitura'; $('turbidityDescription').textContent='Sem medição atual do dispositivo.'; $('percentage').textContent='—';$('distance').textContent='—';$('rssi').textContent='—';$('wifiDescription').textContent='Aguardando o dispositivo';$('levelLabel').textContent='Sem leitura';$('water').style.height='0%';$('gauge').removeAttribute('aria-valuenow');$('gauge').setAttribute('aria-valuetext','Sem leitura');$('gaugeLabel').textContent='SEM DADOS';$('levelDescription').textContent='Nenhuma medição atual disponível.'; }
 function render(){
+  $('simTokenButton').hidden=!session || session.uid!==config?.deviceUid;
   clearValues();
   $('updated').textContent=sample?new Date(sample.timestamp).toLocaleTimeString('pt-BR'):'—';
   $('age').textContent=sample?new Date(sample.timestamp).toLocaleDateString('pt-BR')+' · há '+Math.max(0,Math.floor((Date.now()-sample.timestamp)/1000))+' s':'Nenhum dado recebido ainda.';
-  $('readingOrigin').textContent=demo?'Demonstração · dados simulados':'Medição pelo HC-SR04';
+  $('readingOrigin').textContent=demo?'Demonstração local':sample?.source==='simulacao'?'Simulação no Cirkit':sample?.source==='esp8266'?'Sensor real · ESP8266':'Origem não informada';
   if(networkError){status('Não foi possível atualizar',networkError,'Sem conexão','error');return;}
   if(!sample){if(session)status('Aguardando a primeira medição','Confira o Wi-Fi, o UID da placa e o Monitor Serial do Arduino IDE.','Aguardando sensor');else status('Vamos conectar seu reservatório','Informe os dados do Firebase abaixo. O painel só exibirá valores reais quando a placa enviar uma medição válida.',config?'Aguardando acesso':'Aguardando configuração');return;}
   if(!isFresh(sample)){status('Dispositivo sem atualização','A última medição tem mais de 45 segundos ou o relógio está incorreto. Verifique a placa e sua conexão.','Leitura desatualizada','warn');$('levelLabel').textContent='Desatualizado';return;}
+  $('turbidityStatus').textContent='Sensor pendente';
+  $('turbidityDescription').textContent='Aguardando o modelo e a calibração do sensor de turbidez.';
   if(Number.isFinite(sample.rssi)){$('rssi').textContent=sample.rssi+' dBm';$('wifiDescription').textContent=sample.rssi>=-60?'Sinal forte':sample.rssi>=-75?'Sinal razoável':'Sinal fraco';}
   if(sample.status!=='ok'){status('O sensor não recebeu um eco válido','Confira as ligações, a posição do sensor e a superfície da água. Falha de leitura não significa caixa vazia.','Sensor sem leitura','warn');$('levelLabel').textContent='Sem eco';return;}
   $('distance').textContent=number(sample.distanceCm);
   if(sample.percent===null){status('Falta calibrar o reservatório','A distância já está disponível. No nivelclean_config.h, informe as distâncias com a caixa vazia e cheia e confirme CALIBRATED.','Sensor conectado','live');$('levelDescription').textContent='Calibre a caixa para obter o percentual.';$('levelLabel').textContent='Sem calibração';return;}
   const p=sample.percent;
   $('percentage').textContent=number(p,0);$('water').style.height=p+'%';$('gauge').setAttribute('aria-valuenow',p.toFixed(1));$('gauge').setAttribute('aria-valuetext',number(p,0)+' por cento');$('gaugeLabel').textContent='';
-  $('levelLabel').textContent=p<=20?'Nível baixo':p>=95?'Nível alto':'Nível normal';
+  $('levelLabel').textContent=levelClass(p);
   $('levelDescription').textContent=p<=20?'O reservatório está com pouca água.':p>=95?'O reservatório está próximo do nível máximo.':'Seu reservatório está sendo monitorado.';
   if(demo)status('Você está no modo de demonstração','Arraste o controle para testar o indicador. Estes valores não vêm da sua caixa d’água.','Dados simulados','warn');
-  else status('Medição atualizada',p<=20?'Nível de água abaixo de 20%.':p>=95?'Nível de água igual ou acima de 95%.':'Recebendo as medições do ESP8266 pelo Firebase.','Sensor conectado','live');
+  else if(sample.source==='simulacao')status('Simulação conectada ao Firebase','Os valores vêm do circuito virtual. Não representam a caixa real.','Dados simulados','warn');
+  else status('Medição atualizada',p<=20?'Nível de água igual ou abaixo de 20%.':p>=95?'Nível de água igual ou acima de 95%.':'Recebendo as medições do dispositivo pelo Firebase.','Sensor conectado','live');
 }
 async function request(url, options={}){
   const controller=new AbortController();inFlight.add(controller);const timeout=setTimeout(()=>controller.abort(),15000);
@@ -48,21 +52,30 @@ async function poll(){
   if(!session||demo||busy)return;
   busy=true;const g=generation;clearTimeout(timer);$('refreshButton').disabled=true;
   try{
-    if(Date.now()>=session.expiresAt-60000){const d=await request('https://securetoken.googleapis.com/v1/token?key='+encodeURIComponent(config.apiKey),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:session.refreshToken}).toString()});if(g!==generation)return;if(!d?.id_token||!d.refresh_token)throw new Error('A sessão expirou. Entre novamente.');session={token:d.id_token,refreshToken:d.refresh_token,expiresAt:Date.now()+Number(d.expires_in)*1000};}
+    if(Date.now()>=session.expiresAt-60000){const d=await request('https://securetoken.googleapis.com/v1/token?key='+encodeURIComponent(config.apiKey),{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'refresh_token',refresh_token:session.refreshToken}).toString()});if(g!==generation)return;if(!d?.id_token||!d.refresh_token)throw new Error('A sessão expirou. Entre novamente.');session={uid:d.user_id,token:d.id_token,refreshToken:d.refresh_token,expiresAt:Date.now()+Number(d.expires_in)*1000};}
     const data=await request(DB+'/nivelclean/devices/'+encodeURIComponent(config.deviceUid)+'/telemetry.json?auth='+encodeURIComponent(session.token));if(g!==generation)return;sample=parseTelemetry(data);networkError='';
   }catch(e){if(g===generation)networkError=friendly(e);}
   finally{if(g===generation){busy=false;$('refreshButton').disabled=!session;render();if(session&&!demo)timer=setTimeout(poll,10000);}}
 }
 $('configForm').addEventListener('submit',e=>{e.preventDefault();const next={apiKey:$('apiKey').value.trim(),deviceUid:$('deviceUid').value.trim()};if(!validConfig(next)){$('formMessage').textContent='Confira a chave de API e o UID. Eles não devem conter espaços.';return;}disconnect();demo=false;$('demoPanel').hidden=true;$('demoButton').textContent='Testar visual';config=next;try{localStorage.setItem(STORAGE,JSON.stringify(config));$('formMessage').textContent='Configuração salva. Agora entre com o usuário do painel.';}catch{$('formMessage').textContent='Configuração pronta para esta sessão. O navegador não permitiu salvá-la.';}$('setupSummary').textContent='Configuração pronta · entre para acompanhar';render();});
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();if(!config){$('formMessage').textContent='Salve a chave de API e o UID da placa primeiro.';return;}disconnect();demo=false;$('demoPanel').hidden=true;$('demoButton').textContent='Testar visual';const g=generation;const email=$('email').value.trim(),password=$('password').value;$('password').value='';$('loginButton').disabled=true;$('loginButton').textContent='Conectando…';$('formMessage').textContent='Autenticando no Firebase…';render();
-  try{const d=await request('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+encodeURIComponent(config.apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,returnSecureToken:true})});if(g!==generation)return;if(!d?.idToken||!d.refreshToken)throw new Error('Resposta de autenticação inválida.');session={token:d.idToken,refreshToken:d.refreshToken,expiresAt:Date.now()+Number(d.expiresIn)*1000};$('logoutButton').hidden=false;$('setupSummary').textContent='Sessão conectada';$('formMessage').textContent='Acesso realizado.';$('setup').open=false;await poll();}
+  try{const d=await request('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+encodeURIComponent(config.apiKey),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,returnSecureToken:true})});if(g!==generation)return;if(!d?.idToken||!d.refreshToken)throw new Error('Resposta de autenticação inválida.');session={uid:d.localId,token:d.idToken,refreshToken:d.refreshToken,expiresAt:Date.now()+Number(d.expiresIn)*1000};$('logoutButton').hidden=false;$('setupSummary').textContent='Sessão conectada';$('formMessage').textContent='Acesso realizado.';$('setup').open=false;await poll();}
   catch(err){if(g===generation){$('formMessage').textContent=friendly(err);networkError=friendly(err);render();}}
   finally{if(g===generation){$('loginButton').disabled=false;$('loginButton').textContent='Conectar reservatório';}}
 });
 $('logoutButton').addEventListener('click',()=>{disconnect();$('setup').open=true;$('formMessage').textContent='Você saiu do painel.';$('setupSummary').textContent='Configuração salva · entre para acompanhar';render();});
 $('refreshButton').addEventListener('click',poll);
-function demoSample(){const p=Number($('demoSlider').value);$('demoOutput').textContent=p+'%';sample=parseTelemetry({status:'ok',calibrated:true,timestamp:Date.now(),distanceCm:110-p,emptyCm:110,fullCm:10,rssi:-54});render();}
+function demoSample(){const p=Number($('demoSlider').value);$('demoOutput').textContent=p+'%';sample=parseTelemetry({status:'ok',calibrated:true,timestamp:Date.now(),distanceCm:110-p,emptyCm:110,fullCm:10,rssi:-54,source:'simulacao',turbidity:{status:'not_configured'}});render();}
 $('demoButton').addEventListener('click',()=>{const next=!demo;disconnect();demo=next;$('demoPanel').hidden=!demo;$('demoButton').textContent=demo?'Encerrar teste':'Testar visual';$('setup').open=!demo;$('formMessage').textContent='';if(demo)demoSample();else render();});
 $('demoSlider').addEventListener('input',demoSample);
 setInterval(()=>{if(demo){sample.timestamp=Date.now();}render();},1000);
 render();
+
+$('simTokenButton').addEventListener('click',async()=>{
+  if(!session || session.uid!==config?.deviceUid)return;
+  if(session.expiresAt-Date.now()<120000){$('formMessage').textContent='Entre novamente para gerar uma sessão com validade suficiente.';return;}
+  try {
+    await navigator.clipboard.writeText('AUTH '+session.uid+' '+session.token+'\n');
+    $('formMessage').textContent='Sessão copiada. Cole somente na ENTRADA do Monitor Serial do seu simulador e envie com nova linha. Não cole no código nem compartilhe. Válida até '+new Date(session.expiresAt).toLocaleTimeString('pt-BR')+'.';
+  }catch{$('formMessage').textContent='O navegador não permitiu copiar. Abra o painel em HTTPS e tente novamente.';}
+});
