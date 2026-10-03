@@ -1,71 +1,40 @@
-# ESP8266 + HC-SR04 — caixa de 500 L
+# NívelClean — nível de água e turbidez
 
-A versão NodeMCU ESP8266 está em **[esp8266/](https://natan2026.github.io/nivelclean/esp8266/)**.
+[Abrir o painel no celular](https://natan2026.github.io/nivelclean/) · [Guia de montagem e acesso](https://natan2026.github.io/nivelclean/esp8266/guia.html)
 
-- **[Guia completo de instalação, ligação e Firebase](https://natan2026.github.io/nivelclean/esp8266/guia.html)**
-- Firmware: [`firmware/nivelclean_esp8266/nivelclean_esp8266.ino`](firmware/nivelclean_esp8266/nivelclean_esp8266.ino)
-- Copie `config.example.h` para `nivelclean_config.h` localmente e preencha Wi-Fi e conta Firebase. Não publique o arquivo com senhas.
-- NodeMCU: TRIG em **D1/GPIO5**; ECHO em **D2/GPIO4 com divisor 1 kΩ / 2 kΩ**; HC-SR04 em 5 V e GND comum.
-- Caixa: **500 L nominais, 100 cm de altura, 85 cm de diâmetro**. Referência de calibração: sensor 10 cm acima do máximo; vazio 110 cm / cheio 10 cm. Confira na instalação antes de ativar `CALIBRATED`.
-- Firebase Authentication por e-mail/senha; regras em [`firebase/esp8266.rules.json`](firebase/esp8266.rules.json). Estas regras completas não autorizam o antigo `/distancia`; revise a migração conforme o guia.
-- TLS com raízes Google e horário NTP, mediana de 5 leituras, publicação a cada 10 s, estado sem eco e detecção de leitura antiga.
-- A porcentagem indica altura útil. Não convertemos em litros medidos: um cilindro ideal de 100 × Ø85 cm comportaria aproximadamente 567 L.
-- Sem acesso físico à placa, o teste final de Wi-Fi, TLS, Firebase e sensor deve ser feito na instalação.
+## Nesta versão
 
-## Projeto anterior ESP32-S3
+- **ESP8266 físico:** HC-SR04 e dois LCD 16×2 I2C, com configuração local de Wi-Fi/Firebase.
+- **Cirkit:** ESP32-S3, HC-SR04, LCD de nível e LCD de turbidez. [Cópia do circuito](https://app.cirkitdesigner.com/project/05a1b113-96d5-40af-a1b9-6f9091fa4489).
+- Nível em percentual de altura útil: baixo ≤20%, médio >20% e <95%, alto ≥95%.
+- Sem eco ou sem calibração nunca significa caixa vazia. A página oculta medições após 45 segundos sem atualização.
+- **Turbidez pendente:** o sensor está encomendado e o modelo ainda não foi confirmado. Nenhum valor NTU, ligação analógica ou classificação de água limpa é inventado.
+- Página responsiva com demonstração local (não grava no Firebase) e identificação da origem real/simulada.
 
-O painel original na raiz e o firmware anterior foram preservados. A documentação anterior está abaixo.
+## Programas e segurança
 
----
+`firmware/nivelclean_esp8266/`: abra o .ino no Arduino IDE, core ESP8266 3.1.2, ArduinoJson 7.4.2 e LiquidCrystal I2C 1.1.2. Copie config.example.h para nivelclean_config.h apenas localmente; não publique senhas.
 
-# Nível Clean — Sensor ultrassônico com Firebase
+`firmware/nivelclean_simulacao/`: ESP32-S3 para o Cirkit, LiquidCrystal I2C 1.1.2. A rede virtual é CirkitWifi. Envio Firebase requer uma sessão temporária enviada pela entrada Serial; nunca coloque tokens ou senhas no código público. Consulte o guia. O suporte de entrada Serial e HTTPS precisa ser validado no simulador antes de considerar a integração concluída.
 
-Projeto com **ESP32-S3**, sensor ultrassônico **HC-SR04** e display **LCD 16×2 I²C**. A distância aparece no display do circuito e também no painel publicado pelo GitHub Pages.
+As regras completas em `firebase/esp8266.rules.json` negam acesso anônimo, separam os UIDs de escrita e leitura e fecham `/Dados` e `/distancia`. A revisão não apaga dados anteriores. A raiz do site abre o painel autenticado; o sketch antigo foi desativado. As regras só passam a valer no projeto real depois de publicadas no Console.
 
-## Fluxo
+O administrador cadastra `nivelclean/writers/UID_DA_PLACA=true` e `nivelclean/viewers/UID_DO_PAINEL/UID_DA_PLACA=true`. A conta de visualização não escreve. Não conceda acesso na raiz.
 
-```text
-HC-SR04 → ESP32-S3 → LCD 16×2
-                  └→ Firebase /distancia → painel GitHub Pages
-```
+## Ligações físicas propostas — NodeMCU
 
-- Painel: https://natan2026.github.io/nivelclean/
-- Firebase: `https://nivelclean-2bc3b-default-rtdb.firebaseio.com/distancia.json`
-- Circuit Designer: https://app.cirkitdesigner.com/project/723acf31-be30-40e0-9bad-f043e2df169c
-- Firmware: `firmware/sensor_ultrassonico.ino`
+| Função | GPIO / pino |
+|---|---|
+| TRIG HC-SR04 | GPIO5 / D1 |
+| ECHO HC-SR04 | GPIO4 / D2, divisor 1kΩ/2kΩ |
+| SDA dos LCDs | GPIO12 / D6 |
+| SCL dos LCDs | GPIO14 / D5 |
+| LCD nível / turbidez | 0x27 / 0x26, confirmar adaptadores |
 
-## Ligações
+HC-SR04 em 5 V e GND comum. LCDs de 5 V precisam de conversor bidirecional de nível no I2C quando seus pull-ups estão em 5 V. Não aplicar 5 V aos GPIOs. Calibração física permanece desativada até medir a caixa. Os valores 110/10 cm e 500 L são referências antigas, não medições confirmadas.
 
-| Componente | Pino | ESP32-S3 |
-|---|---|---|
-| HC-SR04 | VCC | 5V |
-| HC-SR04 | GND | GND |
-| HC-SR04 | TRIG | GPIO 4 |
-| HC-SR04 | ECHO | GPIO 5 |
-| LCD I²C | VCC | 5V |
-| LCD I²C | GND | GND |
-| LCD I²C | SDA | GPIO 8 |
-| LCD I²C | SCL | GPIO 9 |
+## Verificação
 
-> Em montagem física, o ECHO do HC-SR04 pode chegar a 5 V. Use divisor resistivo ou conversor de nível antes do GPIO 5 do ESP32-S3. Na simulação, siga o comportamento do componente do Cirkit Designer.
+`node --test esp8266/tests/model.test.mjs` verifica cálculos, limites, falhas, dados antigos, origem e turbidez pendente. O workflow verifica a compilação e as regras no emulador Firebase. A validação no hardware real ainda depende da montagem e da calibração.
 
-## Funcionamento
-
-- O sensor é lido a cada 200 ms.
-- O LCD mostra a distância com uma casa decimal.
-- O Firebase recebe a distância uma vez por segundo.
-- O painel web consulta `/distancia.json` uma vez por segundo.
-- Faixa considerada válida: 2 a 400 cm.
-- Um filtro simples reduz oscilações da leitura.
-
-## Bibliotecas
-
-- `WiFi.h`
-- `HTTPClient.h`
-- `Wire.h`
-- `LiquidCrystal_I2C.h`
-
-## Segurança
-
-O endpoint REST está no navegador. Para protótipos e simulação, regras públicas podem funcionar. Para equipamento real, utilize Firebase Authentication e regras que aceitem somente usuários/dispositivos autorizados. Não publique senhas ou tokens administrativos.
-
+Turbidez não comprova potabilidade nem a limpeza do reservatório.
