@@ -50,7 +50,14 @@
           <label>Senha<input id="password" type="password" required autocomplete="current-password" placeholder="Senha do usuário do painel"></label>
           <div class="form-footer"><small>A senha e a sessão não são salvas pelo aplicativo.</small><div class="button-group"><button id="logoutButton" class="button secondary" type="button" hidden>Sair</button><button id="loginButton" class="button primary" type="submit">Conectar reservatório</button></div></div>
         </form>
-        <button id="simTokenButton" hidden class="button secondary" type="button">Copiar sessão para o simulador</button><p id="formMessage" class="form-message" role="status"></p>
+        <button id="simTokenButton" hidden class="button secondary" type="button">Preparar sessão do simulador</button>
+        <div id="simSession" class="note" hidden>
+          <strong id="simStepLabel"></strong>
+          <p>Copie um comando por vez, cole no campo de entrada do Monitor Serial do Cirkit e clique em Enviar. Depois avance para o próximo comando. Não cole no código, na conversa da IA ou em arquivos.</p>
+          <label>Comando temporário<textarea id="simCommand" readonly rows="3" autocomplete="off" spellcheck="false" style="width:100%;box-sizing:border-box;resize:vertical"></textarea></label>
+          <div class="button-group"><button id="simPrevious" class="button secondary" type="button">Anterior</button><button id="simCopy" class="button primary" type="button">Copiar comando</button><button id="simNext" class="button secondary" type="button">Próximo comando</button></div>
+          <p>Após o último comando, aguarde a confirmação no Serial. Para recomeçar, clique em Preparar sessão do simulador. Use SAIR; no Serial para encerrar.</p>
+        </div><p id="formMessage" class="form-message" role="status"></p>
       </div>
     </details>
     <footer><span>Nível Clean · ESP8266</span><a href="./guia.html">Ligação e instalação</a><a href="https://github.com/natan2026/nivelclean/tree/main/firmware/nivelclean_esp8266" target="_blank" rel="noopener noreferrer">Código para Arduino</a></footer>

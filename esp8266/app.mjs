@@ -1,9 +1,12 @@
 import {parseTelemetry, isFresh, levelClass} from './model.mjs';
+import {simulatorCommands} from './simulator-session.mjs';
 const DB = 'https://nivelclean-2bc3b-default-rtdb.firebaseio.com';
 const STORAGE = 'nivelclean.esp8266.connection.v1';
 const $ = id => document.getElementById(id);
 const number = (v, digits=1) => v.toLocaleString('pt-BR', {minimumFractionDigits:digits,maximumFractionDigits:digits});
 let config = null, session = null, sample = null, demo = false, busy = false, generation = 0, timer = null, networkError = '', inFlight = new Set();
+let serialSteps = [], serialIndex = 0, serialExpiresAt = 0;
+function clearSerialSteps(){serialSteps=[];serialIndex=0;serialExpiresAt=0;$('simSession').hidden=true;$('simCommand').value='';}
 const validConfig = c => c && typeof c.apiKey === 'string' && /^[A-Za-z0-9_-]{15,100}$/.test(c.apiKey) && /^[A-Za-z0-9_-]{1,128}$/.test(c.deviceUid);
 try { const stored = JSON.parse(localStorage.getItem(STORAGE)); if (validConfig(stored)) config = stored; } catch {}
 if(config){$('apiKey').value=config.apiKey;$('deviceUid').value=config.deviceUid;$('setupSummary').textContent='Configuração salva · entre para acompanhar';}
@@ -11,6 +14,7 @@ function status(title,text,badge,kind=''){$('statusTitle').textContent=title;$('
 function clearValues(){ $('turbidityStatus').textContent='Aguardando leitura'; $('turbidityDescription').textContent='Sem medição atual do dispositivo.'; $('percentage').textContent='—';$('distance').textContent='—';$('rssi').textContent='—';$('wifiDescription').textContent='Aguardando o dispositivo';$('levelLabel').textContent='Sem leitura';$('water').style.height='0%';$('gauge').removeAttribute('aria-valuenow');$('gauge').setAttribute('aria-valuetext','Sem leitura');$('gaugeLabel').textContent='SEM DADOS';$('levelDescription').textContent='Nenhuma medição atual disponível.'; }
 function render(){
   $('simTokenButton').hidden=!session || session.uid!==config?.deviceUid;
+  if(serialExpiresAt && Date.now()>=serialExpiresAt)clearSerialSteps();
   clearValues();
   $('updated').textContent=sample?new Date(sample.timestamp).toLocaleTimeString('pt-BR'):'—';
   $('age').textContent=sample?new Date(sample.timestamp).toLocaleDateString('pt-BR')+' · há '+Math.max(0,Math.floor((Date.now()-sample.timestamp)/1000))+' s':'Nenhum dado recebido ainda.';
@@ -47,7 +51,7 @@ function friendly(e){
   if(/Failed to fetch|NetworkError|Load failed/.test(e.message))return 'Não foi possível acessar o Firebase. Confira a internet e as restrições da chave de API.';
   return e.message || 'Não foi possível conectar.';
 }
-function disconnect(){generation++;clearTimeout(timer);for(const c of inFlight)c.abort();session=null;sample=null;busy=false;networkError='';$('logoutButton').hidden=true;$('refreshButton').disabled=true;$('loginButton').disabled=false;$('loginButton').textContent='Conectar reservatório';}
+function disconnect(){generation++;clearTimeout(timer);for(const c of inFlight)c.abort();clearSerialSteps();session=null;sample=null;busy=false;networkError='';$('logoutButton').hidden=true;$('refreshButton').disabled=true;$('loginButton').disabled=false;$('loginButton').textContent='Conectar reservatório';}
 async function poll(){
   if(!session||demo||busy)return;
   busy=true;const g=generation;clearTimeout(timer);$('refreshButton').disabled=true;
@@ -71,11 +75,21 @@ $('demoSlider').addEventListener('input',demoSample);
 setInterval(()=>{if(demo){sample.timestamp=Date.now();}render();},1000);
 render();
 
-$('simTokenButton').addEventListener('click',async()=>{
+function showSerialStep(){
+  $('simCommand').value=serialSteps[serialIndex];
+  $('simStepLabel').textContent=`Comando ${serialIndex+1} de ${serialSteps.length}`;
+  $('simPrevious').disabled=serialIndex===0;
+  $('simNext').disabled=serialIndex===serialSteps.length-1;
+}
+$('simTokenButton').addEventListener('click',()=>{
   if(!session || session.uid!==config?.deviceUid)return;
   if(session.expiresAt-Date.now()<120000){$('formMessage').textContent='Entre novamente para gerar uma sessão com validade suficiente.';return;}
   try {
-    await navigator.clipboard.writeText('AUTH '+session.uid+' '+session.token+'\n');
-    $('formMessage').textContent='Sessão copiada. Cole somente na ENTRADA do Monitor Serial do seu simulador e envie com nova linha. Não cole no código nem compartilhe. Válida até '+new Date(session.expiresAt).toLocaleTimeString('pt-BR')+'.';
-  }catch{$('formMessage').textContent='O navegador não permitiu copiar. Abra o painel em HTTPS e tente novamente.';}
+    serialSteps=simulatorCommands(session.uid,session.token);serialIndex=0;serialExpiresAt=session.expiresAt;
+    $('simSession').hidden=false;showSerialStep();
+    $('formMessage').textContent='Sessão preparada. Envie cada comando, em ordem, somente na entrada do Monitor Serial. Válida até '+new Date(serialExpiresAt).toLocaleTimeString('pt-BR')+'.';
+  }catch(e){clearSerialSteps();$('formMessage').textContent=e.message;}
 });
+$('simCopy').addEventListener('click',async()=>{if(!serialSteps.length||Date.now()>=serialExpiresAt){clearSerialSteps();return;}try{await navigator.clipboard.writeText(serialSteps[serialIndex]);$('formMessage').textContent='Comando copiado. Cole no Monitor Serial e clique em Enviar. Depois avance aqui.';}catch{$('formMessage').textContent='Selecione o comando no campo acima e copie com Ctrl+C.';}});
+$('simNext').addEventListener('click',()=>{if(serialIndex<serialSteps.length-1){serialIndex++;showSerialStep();}});
+$('simPrevious').addEventListener('click',()=>{if(serialIndex>0){serialIndex--;showSerialStep();}});
