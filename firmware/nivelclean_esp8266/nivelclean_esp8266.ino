@@ -10,6 +10,8 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include <math.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 #include "firebase_roots.h"
 #if __has_include("nivelclean_config.h")
 #include "nivelclean_config.h"
@@ -26,6 +28,27 @@ String idToken, refreshToken;
 uint32_t tokenStarted = 0, tokenLifetimeMs = 0, lastAuthTry = 0;
 uint32_t lastCycle = 0, lastWifiTry = 0;
 bool configured = false, triedAuth = false;
+LiquidCrystal_I2C lcdLevel(LCD_LEVEL_ADDRESS,16,2);
+LiquidCrystal_I2C lcdTurbidity(LCD_TURBIDITY_ADDRESS,16,2);
+bool levelLcdReady=false, turbidityLcdReady=false;
+bool i2cPresent(uint8_t address) {Wire.beginTransmission(address);return Wire.endTransmission()==0;}
+void lcdLine(LiquidCrystal_I2C &lcd, uint8_t row, const String &text) {
+  lcd.setCursor(0,row);
+  for(uint8_t i=0;i<16;i++) lcd.print(i<text.length()?text[i]:' ');
+}
+void updateDisplays(float cm) {
+  if(levelLcdReady) {
+    if(!isfinite(cm)) {lcdLine(lcdLevel,0,"NIVEL: --");lcdLine(lcdLevel,1,"SEM LEITURA");}
+    else if(!calibrationReady()) {lcdLine(lcdLevel,0,String(cm,1)+" cm");lcdLine(lcdLevel,1,"CALIBRAR CAIXA");}
+    else {
+      float p=constrain(100.0f*(EMPTY_DISTANCE_CM-cm)/(EMPTY_DISTANCE_CM-FULL_DISTANCE_CM),0.0f,100.0f);
+      lcdLine(lcdLevel,0,"Nivel: "+String(p,0)+"%");
+      lcdLine(lcdLevel,1,p<=20?"NIVEL BAIXO":p>=95?"NIVEL ALTO":"NIVEL MEDIO");
+    }
+  }
+  if(turbidityLcdReady) {lcdLine(lcdTurbidity,0,"TURBIDEZ");lcdLine(lcdTurbidity,1,"SENSOR PENDENTE");}
+}
+
 
 bool clockReady() { return time(nullptr) >= 1767225600; } // 01/01/2026 UTC
 bool calibrationReady() {
@@ -144,7 +167,9 @@ void publishReading(float cm) {
   data["calibrated"] = calibrated;
   data["timestamp"][".sv"] = "timestamp"; // Horario do servidor Firebase.
   data["rssi"] = WiFi.RSSI();
-  data["version"] = "esp8266-1.0.0";
+  data["version"] = "esp8266-2.0.0";
+  data["source"] = "esp8266";
+  data["turbidity"]["status"] = "not_configured";
   data["tankHeightCm"] = TANK_HEIGHT_CM;
   data["tankDiameterCm"] = TANK_DIAMETER_CM;
   data["capacityL"] = NOMINAL_CAPACITY_L;
@@ -168,6 +193,15 @@ void setup() {
   Serial.begin(115200); delay(200);
   pinMode(TRIG_PIN, OUTPUT); digitalWrite(TRIG_PIN, LOW); pinMode(ECHO_PIN, INPUT);
   Serial.println(F("\nNivel Clean | ESP8266 | TRIG D1/GPIO5 | ECHO D2/GPIO4 com divisor"));
+  Wire.begin(LCD_SDA_PIN,LCD_SCL_PIN);
+  if(LCD_LEVEL_ADDRESS!=LCD_TURBIDITY_ADDRESS) {
+    levelLcdReady=i2cPresent(LCD_LEVEL_ADDRESS);
+    turbidityLcdReady=i2cPresent(LCD_TURBIDITY_ADDRESS);
+    if(levelLcdReady) {lcdLevel.init();lcdLevel.backlight();}
+    if(turbidityLcdReady) {lcdTurbidity.init();lcdTurbidity.backlight();}
+  }
+  if(!levelLcdReady || !turbidityLcdReady) Serial.println(F("Confira os dois enderecos I2C e o conversor de nivel dos LCDs."));
+  updateDisplays(NAN);
   configured = !placeholder(WIFI_SSID) && !placeholder(FIREBASE_API_KEY) && !placeholder(DEVICE_EMAIL)
     && !placeholder(DEVICE_PASSWORD) && !placeholder(DEVICE_UID) && validUid();
   if (!configured) Serial.println(F("Preencha nivelclean_config.h para ativar Wi-Fi/Firebase. Medicao local continua no Serial."));
@@ -192,6 +226,7 @@ void loop() {
     else ready = authenticate();
   }
   const float cm = measureDistance();
+  updateDisplays(cm);
   if (isfinite(cm)) Serial.printf("Distancia: %.1f cm\n",cm);
   else Serial.println(F("Sem eco valido. Verifique sensor, divisor e posicionamento."));
   if (ready) publishReading(cm);

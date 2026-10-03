@@ -9,7 +9,7 @@ constexpr char DEVICE_EMAIL[] = "PREENCHA_EMAIL_DA_PLACA";
 constexpr char DEVICE_PASSWORD[] = "PREENCHA_SENHA_DA_PLACA";
 constexpr char DEVICE_UID[] = "PREENCHA_UID_DA_PLACA";
 
-// Dados informados da caixa. 500 L e a capacidade NOMINAL, nao volume calculado.
+// Referencias anteriores do projeto: confirme na montagem real. 500 L e a capacidade NOMINAL, nao volume calculado.
 constexpr float TANK_HEIGHT_CM = 100.0f;
 constexpr float TANK_DIAMETER_CM = 85.0f;
 constexpr float NOMINAL_CAPACITY_L = 500.0f;
@@ -19,3 +19,10 @@ constexpr float NOMINAL_CAPACITY_L = 500.0f;
 constexpr float EMPTY_DISTANCE_CM = 110.0f;
 constexpr float FULL_DISTANCE_CM = 10.0f;
 constexpr bool CALIBRATED = false;
+
+// LCDs: enderecos diferentes, conferir com scanner I2C antes da montagem.
+// I2C em D6/D5 para preservar TRIG D1 e ECHO D2 do projeto anterior.
+constexpr uint8_t LCD_SDA_PIN = 12; // D6
+constexpr uint8_t LCD_SCL_PIN = 14; // D5
+constexpr uint8_t LCD_LEVEL_ADDRESS = 0x27;
+constexpr uint8_t LCD_TURBIDITY_ADDRESS = 0x26;

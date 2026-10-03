@@ -17,7 +17,7 @@
     <div class="header-actions"><span class="board">ESP8266 · HC-SR04</span><button id="demoButton" class="button secondary" type="button">Testar visual</button></div>
   </header>
   <main>
-    <div class="page-heading"><div><p class="eyebrow">SEU RESERVATÓRIO</p><h1>Nível da água</h1><p style="font-size:.875rem;color:var(--muted);margin:12px 0 0">Caixa de 500 L · Altura 100 cm · Diâmetro 85 cm</p></div><span id="connection" class="badge">Aguardando configuração</span></div>
+    <div class="page-heading"><div><p class="eyebrow">SEU RESERVATÓRIO</p><h1>Nível e turbidez</h1><p style="font-size:.875rem;color:var(--muted);margin:12px 0 0">Monitoramento do reservatório · nível em percentual de altura útil</p></div><span id="connection" class="badge">Aguardando configuração</span></div>
     <div id="demoPanel" class="demo-panel" hidden><div><strong>Demonstração — dados simulados</strong><p>Este teste não consulta nem grava no Firebase.</p></div><label for="demoSlider">Nível de teste <output id="demoOutput">62%</output><input id="demoSlider" type="range" min="0" max="100" value="62"></label></div>
     <div class="dashboard">
       <section class="level-card" aria-labelledby="levelHeading">
@@ -29,6 +29,7 @@
         <div class="level-footer"><span id="readingOrigin">Medição pelo HC-SR04</span><span>Atualização a cada 10 s</span></div>
       </section>
       <div class="metrics">
+        <section class="metric turbidity-card"><h2>Turbidez da água</h2><p class="metric-value" id="turbidityStatus">Aguardando leitura</p><p id="turbidityDescription">Aguardando o modelo do sensor.</p><p class="turbidity-note">Turbidez não comprova potabilidade nem a limpeza da caixa.</p></section>
         <section class="metric"><div class="metric-heading"><h2>Distância até a água</h2><span aria-hidden="true">↕</span></div><p class="metric-value"><span id="distance">—</span><small>cm</small></p><p>Entre a face do sensor e a superfície.</p></section>
         <section class="metric"><h2>Última medição recebida</h2><p class="metric-value time-value" id="updated">—</p><p id="age">Nenhum dado recebido ainda.</p></section>
         <section class="metric compact"><div><h2>Sinal Wi-Fi</h2><p id="wifiDescription">Aguardando o dispositivo</p></div><strong id="rssi">—</strong></section>
@@ -41,7 +42,7 @@
         <p class="setup-intro">Use a chave de API do projeto e o UID da conta dedicada à placa. <a href="./guia.html">Ver ligação e configuração</a></p>
         <form id="configForm" class="form-grid">
           <label>Chave de API Web do Firebase<input id="apiKey" required autocomplete="off" spellcheck="false" placeholder="AIza…" minlength="15"></label>
-          <label>UID da conta do ESP8266<input id="deviceUid" required autocomplete="off" spellcheck="false" placeholder="Copie de Authentication → Users" pattern="[A-Za-z0-9_-]{1,128}"></label>
+          <label>UID da conta do dispositivo<input id="deviceUid" required autocomplete="off" spellcheck="false" placeholder="Copie de Authentication → Users" pattern="[A-Za-z0-9_-]{1,128}"></label>
           <div class="form-footer"><small>Banco: nivelclean-2bc3b-default-rtdb</small><button class="button secondary" type="submit">Salvar configuração</button></div>
         </form>
         <form id="loginForm" class="form-grid login-form">
@@ -49,7 +50,7 @@
           <label>Senha<input id="password" type="password" required autocomplete="current-password" placeholder="Senha do usuário do painel"></label>
           <div class="form-footer"><small>A senha e a sessão não são salvas pelo aplicativo.</small><div class="button-group"><button id="logoutButton" class="button secondary" type="button" hidden>Sair</button><button id="loginButton" class="button primary" type="submit">Conectar reservatório</button></div></div>
         </form>
-        <p id="formMessage" class="form-message" role="status"></p>
+        <button id="simTokenButton" hidden class="button secondary" type="button">Copiar sessão para o simulador</button><p id="formMessage" class="form-message" role="status"></p>
       </div>
     </details>
     <footer><span>Nível Clean · ESP8266</span><a href="./guia.html">Ligação e instalação</a><a href="https://github.com/natan2026/nivelclean/tree/main/firmware/nivelclean_esp8266" target="_blank" rel="noopener noreferrer">Código para Arduino</a></footer>

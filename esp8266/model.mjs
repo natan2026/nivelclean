@@ -10,8 +10,17 @@ export function parseTelemetry(data) {
     if (!(Number.isFinite(data.emptyCm) && Number.isFinite(data.fullCm) && data.fullCm >= 2 && data.emptyCm <= 400 && data.emptyCm > data.fullCm)) throw new Error('Calibração inválida recebida da placa.');
     percent = Math.max(0, Math.min(100, 100 * (data.emptyCm - data.distanceCm) / (data.emptyCm - data.fullCm)));
   }
-  return {...data, distanceCm: data.status === 'ok' ? data.distanceCm : null, percent};
+  const source = data.source ?? 'unknown';
+  if (!['esp8266','simulacao','unknown'].includes(source)) throw new Error('Origem da medição inválida.');
+  const turbidity = data.turbidity ?? {status:'not_configured'};
+  if (!turbidity || turbidity.status !== 'not_configured' || Object.keys(turbidity).some(k=>k!=='status')) throw new Error('Sensor de turbidez ainda não configurado nesta versão.');
+  return {...data, source, turbidity, distanceCm: data.status === 'ok' ? data.distanceCm : null, percent};
 }
 export function isFresh(sample, now = Date.now()) {
   return Boolean(sample && now - sample.timestamp <= STALE_MS && sample.timestamp - now <= 60000);
+}
+
+export function levelClass(percent) {
+  if (!Number.isFinite(percent) || percent < 0 || percent > 100) return 'Sem leitura';
+  return percent <= 20 ? 'Nível baixo' : percent >= 95 ? 'Nível alto' : 'Nível médio';
 }

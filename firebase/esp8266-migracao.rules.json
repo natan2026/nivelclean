@@ -55,18 +55,22 @@
             },
             "$other": {
               ".validate": false
+            },
+            "source": {
+              ".validate": "newData.val() === 'esp8266' || newData.val() === 'simulacao'"
+            },
+            "turbidity": {
+              ".validate": "newData.hasChildren(['status'])",
+              "status": {
+                ".validate": "newData.val() === 'not_configured'"
+              },
+              "$other": {
+                ".validate": false
+              }
             }
           }
         }
       }
-    },
-    "Dados": {
-      ".read": true,
-      ".write": true
-    },
-    "distancia": {
-      ".read": true,
-      ".write": true
     }
   }
 }

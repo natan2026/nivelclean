@@ -1,0 +1,1 @@
+{"database":{"rules":"firebase/esp8266.rules.json"},"emulators":{"database":{"port":9000},"ui":{"enabled":false},"singleProjectMode":true}}
