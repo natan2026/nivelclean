@@ -15,7 +15,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  checks:
+    uses: ./.github/workflows/verify-esp8266.yml
   deploy:
+    needs: checks
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -28,9 +31,15 @@ jobs:
         with:
           enablement: true
       - name: Preparar arquivos
+        run: |
+          mkdir -p public/esp8266 public/firebase
+          cp index.html public/
+          cp esp8266/*.html esp8266/*.mjs esp8266/*.css public/esp8266/
+          cp firebase/esp8266.rules.json public/firebase/
+      - name: Empacotar site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: public
       - name: Publicar
         id: deployment
         uses: actions/deploy-pages@v4
