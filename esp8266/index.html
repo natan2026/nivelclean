@@ -1,60 +1,29 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#102b42">
-  <meta name="description" content="Acompanhe o nível de água medido pelo ESP8266 e HC-SR04.">
-  <meta name="referrer" content="no-referrer">
-  <title>Nível Clean · Monitor de água</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23102b42'/%3E%3Cpath d='M16 5C12 11 8 15 8 20a8 8 0 0016 0c0-5-4-9-8-15' fill='%2339d1ec'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./style.css">
-  <script type="module" src="./app.mjs"></script>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#087f8c">
+  <meta name="description" content="Monitoramento em tempo real do nível e da qualidade da água."><title>Nível Clean 2026</title>
+  <style>
+    :root{color-scheme:dark;--bg:#061a22;--cyan:#45d5e6;--green:#58e09b;--yellow:#ffd166;--red:#ff6b6b;--muted:#99b8c2}*{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at top,#0d3b49 0,#061a22 52%);color:#f5fbfd}main{width:min(100% - 32px,880px);margin:auto;padding:32px 0 48px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:26px}h1{margin:0;font-size:clamp(1.65rem,5vw,2.65rem)}.subtitle{margin:6px 0 0;color:var(--muted)}
+    .live{display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid #24505c;border-radius:999px;color:var(--muted);white-space:nowrap}.dot{width:9px;height:9px;border-radius:50%;background:var(--yellow);box-shadow:0 0 12px currentColor}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.card{background:linear-gradient(145deg,rgba(16,56,68,.96),rgba(8,35,44,.96));border:1px solid #1e4b57;border-radius:22px;padding:24px;box-shadow:0 18px 45px rgba(0,0,0,.25)}
+    .label{color:var(--muted);font-size:.92rem;text-transform:uppercase;letter-spacing:.08em}.value{margin:9px 0 5px;font-size:clamp(2.3rem,9vw,4.5rem);font-weight:800;line-height:1;color:var(--cyan)}.unit{font-size:1.1rem;color:var(--muted)}.status{display:inline-flex;margin-top:18px;padding:8px 12px;border-radius:999px;background:#153e48;font-weight:750}
+    .tank{height:210px;border:4px solid #bdebf1;border-radius:18px 18px 28px 28px;overflow:hidden;position:relative;background:#09242d;margin-top:18px}.water{position:absolute;inset:auto 0 0;height:0;background:linear-gradient(#4be0ee,#078fa7);transition:height .8s ease}.water:before{content:"";position:absolute;top:-8px;left:-5%;width:110%;height:16px;border-radius:50%;background:#72edf5;opacity:.8}
+    .quality{display:flex;align-items:center;gap:12px;margin-top:24px}.quality-icon{width:54px;height:54px;display:grid;place-items:center;border-radius:16px;background:#123d48;font-size:1.7rem}.error{margin-top:18px;padding:14px 16px;border-radius:14px;background:#4b2428;color:#ffd8d8;display:none}footer{text-align:center;color:var(--muted);margin-top:25px;font-size:.9rem}@media(max-width:650px){header{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}}
+  </style>
 </head>
-<body>
-<div class="shell">
-  <header class="topbar">
-    <a class="brand" href="./"><span class="brand-icon" aria-hidden="true">≋</span><span>Nível<span class="brand-light">Clean</span><small>MONITOR DE ÁGUA</small></span></a>
-    <div class="header-actions"><span class="board">ESP8266 · HC-SR04</span><button id="demoButton" class="button secondary" type="button">Testar visual</button></div>
-  </header>
-  <main>
-    <div class="page-heading"><div><p class="eyebrow">SEU RESERVATÓRIO</p><h1>Nível e turbidez</h1><p style="font-size:.875rem;color:var(--muted);margin:12px 0 0">Monitoramento do reservatório · nível em percentual de altura útil</p></div><span id="connection" class="badge">Aguardando configuração</span></div>
-    <div id="demoPanel" class="demo-panel" hidden><div><strong>Demonstração — dados simulados</strong><p>Este teste não consulta nem grava no Firebase.</p></div><label for="demoSlider">Nível de teste <output id="demoOutput">62%</output><input id="demoSlider" type="range" min="0" max="100" value="62"></label></div>
-    <div class="dashboard">
-      <section class="level-card" aria-labelledby="levelHeading">
-        <div class="card-top"><h2 id="levelHeading">Nível atual</h2><span id="levelLabel" class="level-tag">Sem leitura</span></div>
-        <div class="level-main">
-          <div class="reading"><div><span id="percentage">—</span><span class="percent-symbol">%</span></div><p id="levelDescription">Conecte o sensor para acompanhar.</p><div class="reading-note">Altura de água útil<br><span>0% vazio · 100% cheio</span></div></div>
-          <div class="gauge-wrap"><div class="gauge-scale" aria-hidden="true"><span>100</span><span>75</span><span>50</span><span>25</span><span>0</span></div><div id="gauge" class="gauge" role="meter" aria-label="Nível de água" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Sem leitura"><div class="gauge-lines" aria-hidden="true"></div><div id="water" class="water" style="height:0%"></div><span class="gauge-label" id="gaugeLabel">SEM DADOS</span></div></div>
-        </div>
-        <div class="level-footer"><span id="readingOrigin">Medição pelo HC-SR04</span><span>Atualização a cada 10 s</span></div>
-      </section>
-      <div class="metrics">
-        <section class="metric turbidity-card"><h2>Turbidez da água</h2><p class="metric-value" id="turbidityStatus">Aguardando leitura</p><p id="turbidityDescription">Aguardando o modelo do sensor.</p><p class="turbidity-note">Turbidez não comprova potabilidade nem a limpeza da caixa.</p></section>
-        <section class="metric"><div class="metric-heading"><h2>Distância até a água</h2><span aria-hidden="true">↕</span></div><p class="metric-value"><span id="distance">—</span><small>cm</small></p><p>Entre a face do sensor e a superfície.</p></section>
-        <section class="metric"><h2>Última medição recebida</h2><p class="metric-value time-value" id="updated">—</p><p id="age">Nenhum dado recebido ainda.</p></section>
-        <section class="metric compact"><div><h2>Sinal Wi-Fi</h2><p id="wifiDescription">Aguardando o dispositivo</p></div><strong id="rssi">—</strong></section>
-      </div>
-    </div>
-    <div class="status-box" role="status" aria-live="polite"><span class="status-mark" aria-hidden="true">i</span><div><strong id="statusTitle">Vamos conectar seu reservatório</strong><p id="statusText">Informe os dados do Firebase abaixo. O painel só exibirá valores reais quando a placa enviar uma medição válida.</p></div><button id="refreshButton" class="button secondary" disabled type="button">Atualizar</button></div>
-    <details id="setup" class="setup" open>
-      <summary><span>Conectar ao Firebase<small id="setupSummary">Configure uma vez neste navegador</small></span><span class="summary-sign" aria-hidden="true">+</span></summary>
-      <div class="setup-content">
-        <p class="setup-intro">Use a chave de API do projeto e o UID da conta dedicada à placa. <a href="./guia.html">Ver ligação e configuração</a></p>
-        <form id="configForm" class="form-grid">
-          <label>Chave de API Web do Firebase<input id="apiKey" required autocomplete="off" spellcheck="false" placeholder="AIza…" minlength="15"></label>
-          <label>UID da conta do dispositivo<input id="deviceUid" required autocomplete="off" spellcheck="false" placeholder="Copie de Authentication → Users" pattern="[A-Za-z0-9_-]{1,128}"></label>
-          <div class="form-footer"><small>Banco: nivelclean-2bc3b-default-rtdb</small><button class="button secondary" type="submit">Salvar configuração</button></div>
-        </form>
-        <form id="loginForm" class="form-grid login-form">
-          <label>E-mail de acesso ao painel<input id="email" type="email" required autocomplete="username" placeholder="Seu usuário do Firebase"></label>
-          <label>Senha<input id="password" type="password" required autocomplete="current-password" placeholder="Senha do usuário do painel"></label>
-          <div class="form-footer"><small>A senha e a sessão não são salvas pelo aplicativo.</small><div class="button-group"><button id="logoutButton" class="button secondary" type="button" hidden>Sair</button><button id="loginButton" class="button primary" type="submit">Conectar reservatório</button></div></div>
-        </form>
-        <button id="simTokenButton" hidden class="button secondary" type="button">Copiar sessão para o simulador</button><p id="formMessage" class="form-message" role="status"></p>
-      </div>
-    </details>
-    <footer><span>Nível Clean · ESP8266</span><a href="./guia.html">Ligação e instalação</a><a href="https://github.com/natan2026/nivelclean/tree/main/firmware/nivelclean_esp8266" target="_blank" rel="noopener noreferrer">Código para Arduino</a></footer>
-  </main>
-</div>
-</body>
-</html>
+<body><main>
+  <header><div><h1>Nível Clean 2026</h1><p class="subtitle">Monitoramento da caixa d’água em tempo real</p></div><div class="live"><span class="dot" id="dot"></span><span id="connection">Conectando…</span></div></header>
+  <section class="grid">
+    <article class="card"><div class="label">Nível da caixa</div><div class="value"><span id="nivel">--</span><span class="unit">%</span></div><div><span id="litros">--</span> litros de 5,00 L</div><div class="tank"><div class="water" id="water"></div></div><div class="status" id="statusNivel">Aguardando dados</div></article>
+    <article class="card"><div class="label">Qualidade da água</div><div class="value"><span id="tds">--</span><span class="unit"> ppm</span></div><div>Leitura do sensor TDS</div><div class="quality"><div class="quality-icon" id="qualityIcon">💧</div><div><div class="label">Situação</div><div class="status" id="qualidade">Aguardando dados</div></div></div></article>
+  </section><div class="error" id="error"></div><footer>Última atualização nesta tela: <span id="updated">—</span></footer>
+</main>
+<script type="module">
+  import{initializeApp}from"https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";import{getAuth,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";import{getDatabase,ref,onValue}from"https://www.gstatic.com/firebasejs/12.4.0/firebase-database.js";
+  const cfg={apiKey:"AIzaSyBcvtFYLnyjoVOFQxAXR-bu6dJhtITGe0Y",authDomain:"nivelclean2026.firebaseapp.com",databaseURL:"https://nivelclean2026-default-rtdb.firebaseio.com",projectId:"nivelclean2026",storageBucket:"nivelclean2026.firebasestorage.app",messagingSenderId:"189322688269",appId:"1:189322688269:web:8d738c1ad78fd52ec8e244"};
+  const $=id=>document.getElementById(id),connection=(t,c)=>{$("connection").textContent=t;$("dot").style.background=c},fail=m=>{$("error").textContent=m;$("error").style.display="block"};
+  try{const app=initializeApp(cfg);await signInAnonymously(getAuth(app));onValue(ref(getDatabase(app),"medicoes"),s=>{if(!s.exists()){connection("Aguardando ESP32","#ffd166");return}const d=s.val(),n=Math.max(0,Math.min(100,Number(d.nivel)||0));$("nivel").textContent=n.toFixed(1).replace(".",",");$("litros").textContent=(Number(d.litros)||0).toFixed(2).replace(".",",");$("tds").textContent=(Number(d.tds)||0).toFixed(1).replace(".",",");$("water").style.height=n+"%";const baixo=d.statusNivel==="NIVEL_BAIXO";$("statusNivel").textContent=baixo?"CAIXA: NÍVEL BAIXO":"CAIXA: NÍVEL OK";$("statusNivel").style.color=baixo?"#ffd166":"#58e09b";const suja=d.qualidadeAgua==="AGUA_SUJA";$("qualidade").textContent=suja?"ÁGUA SUJA":"ÁGUA LIMPA";$("qualidade").style.color=suja?"#ff6b6b":"#58e09b";$("qualityIcon").textContent=suja?"⚠️":"💧";$("updated").textContent=new Date().toLocaleString("pt-BR");connection("Ao vivo","#58e09b");$("error").style.display="none"},e=>{connection("Sem conexão","#ff6b6b");fail("Erro ao ler o Firebase: "+e.message)})}catch(e){connection("Sem conexão","#ff6b6b");fail("Erro ao iniciar o painel: "+e.message)}
+</script></body></html>
